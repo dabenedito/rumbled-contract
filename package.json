@@ -1,0 +1,17 @@
+{
+  "name": "hardhat-tutorial",
+  "version": "1.0.0",
+  "description": "Hardhat tutorial project",
+  "main": "index.js",
+  "scripts": {
+    "compile": "npx hardhat compile",
+    "build": "npx hardhat ignition deploy ./ignition/modules/Token.js",
+    "test": "npx hardhat test"
+  },
+  "author": "Diogo Andrade",
+  "license": "MIT",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "hardhat": "^2.22.2"
+  }
+}
