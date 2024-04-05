@@ -28,9 +28,13 @@ contract Betting {
     // Evento para notificar quando um desafio é aceito
     event ChallengeAccepted(address indexed challenger, uint indexed challengeId);
 
+    // Evento para notificar quando um juiz é atribuído à um desafio
+    event JudgeDefined(address indexed judge);
+
     modifier validJudge(address _judge, uint _challenge) {
         require(_judge != bets[_challenge].challenged, "O desafiado nao pode ser o juiz.");
         require(_judge != bets[_challenge].challenger, "O desafiante nao pode ser o juiz.");
+        require(bets[_challenge].judge == address(0), "Ja existe um juiz para esse desafio");
         _;
     }
 
@@ -81,6 +85,15 @@ contract Betting {
         emit ChallengeAccepted(challenge.challenger, _challengeId);
     }
 
+    function setJudge(uint _challengeId) external validJudge(msg.sender, _challengeId) {
+        require(bets[_challengeId].active, "O desafio precisa estar ativo.");
+
+        Bets storage desafio = bets[_challengeId];
+        desafio.judge = msg.sender;
+
+        emit JudgeDefined(desafio.judge);
+    }
+
     // Função para o juiz declarar o vencedor
     function setWinner(uint256 _challengeId, address _winner) external payable {
         // Somente o juiz pode chamar esta função
@@ -105,11 +118,6 @@ contract Betting {
         payable(_winner).transfer(valorPremio);
         payable(desafio.judge).transfer(pagamentoJuiz);
         payable(owner).transfer(taxaAdministrativa);
-    }
-
-    function declararJuiz(uint _challengeId) external validJudge(msg.sender, _challengeId) {
-        Bets storage desafio = bets[_challengeId];
-        desafio.judge = msg.sender;
     }
 
     function getDesafios() public view returns (Bets[] memory) {

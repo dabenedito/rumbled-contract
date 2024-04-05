@@ -62,6 +62,40 @@ describe("Betting contract", () => {
       };
     };
 
+    const acceptChallengeFixture = async () => {
+      const { contract, owner, address1, address2, address3 } = await loadFixture(createBetFixture);
+
+      await setBalance(address2.address, ethers.parseEther("10000.0"));
+
+      await contract
+        .connect(address2)
+        .acceptChallenge(0, { value: ethers.parseEther("2.0") });
+
+      return {
+        contract,
+        owner,
+        address1,
+        address2,
+        address3,
+      }
+    };
+
+    const setJudgeFixture = async () => {
+      const { contract, owner, address1, address2, address3 } = await loadFixture(acceptChallengeFixture);
+
+      await contract
+        .connect(address3)
+        .setJudge(0);
+
+      return {
+        contract,
+        owner,
+        address1,
+        address2,
+        address3,
+      }
+    };
+
     it("Should create a new challange", async () => {
       const { contract, address1 } = await loadFixture(deployBettingFixture);
 
@@ -129,6 +163,53 @@ describe("Betting contract", () => {
         .acceptChallenge(0, { value: ethers.parseEther("2.0") })
       ).to.be
       .revertedWith("Voce nao pode aceitar o proprio desafio.");
+    });
+
+    it("Should set the judge successfully", async () => {
+      const { contract, address3 } = await loadFixture(acceptChallengeFixture);
+
+      await expect(contract.connect(address3)
+        .setJudge(0)
+      ).to.emit(contract, "JudgeDefined")
+      .withArgs(address3.address);
+
+      const challenge = await contract.bets(0);
+
+      expect(challenge[2]).to.equal(address3.address);
+    });
+
+    it("Should fails if judge is the challenged", async () => {
+      const { contract, address1 } = await loadFixture(acceptChallengeFixture);
+
+      const challenge = await contract.bets(0);
+
+      await expect(contract.connect(address1)
+        .setJudge(0)
+      ).to.be.rejectedWith("O desafiado nao pode ser o juiz.");
+
+      expect(challenge[2]).to.equal(ethers.ZeroAddress);
+    });
+
+    it("Should fails if judge is the challenger", async () => {
+      const { contract, address2 } = await loadFixture(acceptChallengeFixture);
+
+      const challenge = await contract.bets(0);
+
+      await expect(contract.connect(address2).setJudge(0))
+        .to.be.rejectedWith("O desafiante nao pode ser o juiz.");
+
+      expect(challenge[2]).to.equal(ethers.ZeroAddress);
+    });
+
+    it("Should fail if it already has a judge", async () => {
+      const { contract, address3 } = await loadFixture(setJudgeFixture);
+
+      const challenge = await contract.bets(0);
+      
+      await expect(contract.connect(address3).setJudge(0))
+        .to.be.rejectedWith("Ja existe um juiz para esse desafio");
+
+      expect(challenge[2]).not.equal(ethers.ZeroAddress);
     });
   });
 });
